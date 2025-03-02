@@ -1,66 +1,73 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Linq;
 
 namespace JPEG.Images;
 
-class Matrix
+#pragma warning disable CA1416
+internal class Matrix(int height, int width)
 {
-	public readonly Pixel[,] Pixels;
-	public readonly int Height;
-	public readonly int Width;
+	public readonly int Width = width;
+	public readonly int Height = height;
+	public readonly Pixel[,] Pixels = new Pixel[height, width];
 
-	public Matrix(int height, int width)
+	public static unsafe explicit operator Matrix(Bitmap bmp)
 	{
-		Height = height;
-		Width = width;
-
-		Pixels = new Pixel[height, width];
-		for (var i = 0; i < height; ++i)
-		for (var j = 0; j < width; ++j)
-			Pixels[i, j] = new Pixel(0, 0, 0, PixelFormat.RGB);
-	}
-
-	public static explicit operator Matrix(Bitmap bmp)
-	{
-		var height = bmp.Height - bmp.Height % 8;
 		var width = bmp.Width - bmp.Width % 8;
+		var height = bmp.Height - bmp.Height % 8;
 		var matrix = new Matrix(height, width);
+		var bd = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, bmp.PixelFormat);
 
-		for (var j = 0; j < height; j++)
+		try
 		{
-			for (var i = 0; i < width; i++)
+			for (var h = 0; h < height; h++)
 			{
-				var pixel = bmp.GetPixel(i, j);
-				matrix.Pixels[j, i] = new Pixel(pixel.R, pixel.G, pixel.B, PixelFormat.RGB);
+				var pPixel = (byte*)bd.Scan0 + h * bd.Stride;
+				for (var w = 0; w < width; w++)
+				{
+					var blue = *pPixel++;
+					var green = *pPixel++;
+					var red = *pPixel++;
+					matrix.Pixels[h, w] = new Pixel(red, green, blue, PixelFormat.RGB);
+				}
 			}
+			return matrix;
 		}
-
-		return matrix;
+		finally { bmp.UnlockBits(bd); }
 	}
 
-	public static explicit operator Bitmap(Matrix matrix)
+	public static unsafe explicit operator Bitmap(Matrix matrix)
 	{
-		var bmp = new Bitmap(matrix.Width, matrix.Height);
+		var width = matrix.Width;
+		var height = matrix.Height;
+		
+		var bmp = new Bitmap(matrix.Width, matrix.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+		var bd = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, bmp.PixelFormat);
 
-		for (var j = 0; j < bmp.Height; j++)
+		try
 		{
-			for (var i = 0; i < bmp.Width; i++)
+			for (var h = 0; h < height; h++)
 			{
-				var pixel = matrix.Pixels[j, i];
-				bmp.SetPixel(i, j, Color.FromArgb(ToByte(pixel.R), ToByte(pixel.G), ToByte(pixel.B)));
+				var pPixel = (byte*)bd.Scan0 + h * bd.Stride;
+				for (var w = 0; w < width; w++)
+				{
+					var pixel = matrix.Pixels[h, w];
+					*pPixel = ToByte(pixel.B); pPixel++;
+					*pPixel = ToByte(pixel.G); pPixel++;
+					*pPixel = ToByte(pixel.R); pPixel++;
+				}
 			}
+			return bmp;
 		}
-
-		return bmp;
+		finally { bmp.UnlockBits(bd); }
 	}
 
-	private static int ToByte(double d)
-	{
-		var val = (int)d;
-		return val switch
-		{
-			> byte.MaxValue => byte.MaxValue,
-			< byte.MinValue => byte.MinValue,
-			_ => val
-		};
-	}
+	private static byte ToByte(double d) => d switch
+	{ 
+		> byte.MaxValue => byte.MaxValue, 
+		< byte.MinValue => byte.MinValue, 
+		_ => (byte)d
+	};
 }
+#pragma warning restore CA1416
