@@ -37,7 +37,7 @@ public class DCT
 		return MatrixMultiply(semiResult, biasesMatrixT);
 	}
 	
-	public void IDCT2D(double[,] input, double[,] channel)
+	public double[,] IDCT2D(double[,] input)
 	{
 		var width = input.GetLength(1);
 		var height = input.GetLength(0);
@@ -46,21 +46,20 @@ public class DCT
 			throw new ArgumentException("Dimensions don't match");
 
 		var semiResult = MatrixMultiply(biasesMatrixT, input);
-		MatrixMultiply(semiResult, biasesMatrix, ref channel);
-	}
-
-	private static void MatrixMultiply(double[,] m1, double[,] m2, ref double[,] result)
-	{
-		for (var i = 0; i < m1.GetLength(0); i++)
-		for (var j = 0; j < m2.GetLength(1); j++) 
-		for (var k = 0; k < m1.GetLength(0); k++)
-			result[i, j] += m1[i, k] * m2[k, j];
+		return MatrixMultiply(semiResult, biasesMatrix);
 	}
 
 	private static double[,] MatrixMultiply(double[,] m1, double[,] m2)
 	{
 		var result = new double[m1.GetLength(0), m2.GetLength(1)];
-		MatrixMultiply(m1, m2, ref result);
+
+		Parallel.For(0, m1.GetLength(0), i =>
+		{
+			for (var j = 0; j < m2.GetLength(1); j++) 
+			for (var k = 0; k < m1.GetLength(0); k++)
+				result[i, j] += m1[i, k] * m2[k, j];
+		});
+		
 		return result;
 	}
 }

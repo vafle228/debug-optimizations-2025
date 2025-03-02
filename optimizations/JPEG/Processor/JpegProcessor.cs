@@ -73,20 +73,19 @@ public class JpegProcessor : IJpegProcessor
 		{
 			for (var x = 0; x < image.Width; x += DCTSize)
 			{
-				var _y = new double[DCTSize, DCTSize];
-				var cb = new double[DCTSize, DCTSize];
-				var cr = new double[DCTSize, DCTSize];
-				foreach (var channel in new[] { _y, cb, cr })
+				var chn = new double[3][,];  // [_y, cb, cr]
+				
+				for (var i = 0; i < chn.Length; i++)
 				{
 					var quantizedBytes = new byte[DCTSize * DCTSize];
 					allQuantizedBytes.ReadAsync(quantizedBytes, 0, quantizedBytes.Length).Wait();
 					var quantizedFreqs = ZigZagUnScan(quantizedBytes);
 					var channelFreqs = DeQuantize(quantizedFreqs, image.Quality);
-					Dct.IDCT2D(channelFreqs, channel);
-					ShiftMatrixValues(channel, 128);
+					chn[i] = Dct.IDCT2D(channelFreqs);
+					ShiftMatrixValues(chn[i], 128);
 				}
 
-				SetPixels(result, _y, cb, cr, PixelFormat.YCbCr, y, x);
+				SetPixels(result, chn[0], chn[1], chn[2], PixelFormat.YCbCr, y, x);
 			}
 		}
 

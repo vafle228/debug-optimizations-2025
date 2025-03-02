@@ -1,29 +1,29 @@
 ﻿using System;
-using System.Linq;
 
 namespace JPEG.Images;
 
-public class Pixel
+public readonly record struct Pixel
 {
 	private readonly PixelFormat format;
 
 	public Pixel(double firstComponent, double secondComponent, double thirdComponent, PixelFormat pixelFormat)
 	{
-		if (!new[] { PixelFormat.RGB, PixelFormat.YCbCr }.Contains(pixelFormat))
-			throw new FormatException("Unknown pixel format: " + pixelFormat);
 		format = pixelFormat;
-		if (pixelFormat == PixelFormat.RGB)
-		{
-			r = firstComponent;
-			g = secondComponent;
-			b = thirdComponent;
-		}
 
-		if (pixelFormat == PixelFormat.YCbCr)
+		switch (format)
 		{
-			y = firstComponent;
-			cb = secondComponent;
-			cr = thirdComponent;
+			case PixelFormat.RGB:
+				r = firstComponent;
+				g = secondComponent;
+				b = thirdComponent;
+				break;
+			case PixelFormat.YCbCr:
+				y = firstComponent;
+				cb = secondComponent;
+				cr = thirdComponent;
+				break;
+			default:
+				throw new FormatException("Unknown pixel format: " + pixelFormat);
 		}
 	}
 
