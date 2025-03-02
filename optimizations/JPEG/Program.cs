@@ -17,12 +17,12 @@ internal class Program
 			// var imageName = "Big_Black_River_Railroad_Bridge.bmp";
 			var compressedImagePath = imagePath + ".compressed." + JpegProcessor.CompressionQuality;
 			var uncompressedImagePath = imagePath + ".uncompressed." + JpegProcessor.CompressionQuality + ".bmp";
-
+		
 			sw.Restart();
 			processor.Compress(imagePath, compressedImagePath);
 			sw.Stop();
 			Console.WriteLine("Compression: " + sw.ElapsedMilliseconds);
-
+		
 			sw.Restart();
 			processor.Uncompress(compressedImagePath, uncompressedImagePath);
 			sw.Stop();

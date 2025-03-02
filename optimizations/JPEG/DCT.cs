@@ -1,69 +1,66 @@
 ﻿using System;
+using System.Threading.Tasks;
 using JPEG.Utilities;
 
 namespace JPEG;
 
 public class DCT
 {
-	public static double[,] DCT2D(double[,] input)
+	private readonly int dctSize;
+	private readonly double[,] biasesMatrix;
+	private readonly double[,] biasesMatrixT;
+	
+	public DCT(int dctSize)
 	{
-		var height = input.GetLength(0);
-		var width = input.GetLength(1);
-		var coeffs = new double[width, height];
-
-		MathEx.LoopByTwoVariables(
-			0, width,
-			0, height,
-			(u, v) =>
-			{
-				var sum = MathEx
-					.SumByTwoVariables(
-						0, width,
-						0, height,
-						(x, y) => BasisFunction(input[x, y], u, v, x, y, height, width));
-
-				coeffs[u, v] = sum * Beta(height, width) * Alpha(u) * Alpha(v);
-			});
-
-		return coeffs;
-	}
-
-	public static void IDCT2D(double[,] coeffs, double[,] output)
-	{
-		for (var x = 0; x < coeffs.GetLength(1); x++)
+		this.dctSize = dctSize;
+		biasesMatrix = new double[dctSize,dctSize];
+		biasesMatrixT = new double[dctSize,dctSize];
+		
+		for (var k = 0; k < dctSize; k++)
+		for (var n = 0; n < dctSize; n++)
 		{
-			for (var y = 0; y < coeffs.GetLength(0); y++)
-			{
-				var sum = MathEx
-					.SumByTwoVariables(
-						0, coeffs.GetLength(1),
-						0, coeffs.GetLength(0),
-						(u, v) =>
-							BasisFunction(coeffs[u, v], u, v, x, y, coeffs.GetLength(0), coeffs.GetLength(1)) *
-							Alpha(u) * Alpha(v));
-
-				output[x, y] = sum * Beta(coeffs.GetLength(0), coeffs.GetLength(1));
-			}
+			var ck = k == 0 ? Math.Sqrt(dctSize) : Math.Sqrt(dctSize / 2d);
+			biasesMatrix[k, n] = 1 / ck * Math.Cos(Math.PI / dctSize * (n + 0.5) * k);
+			biasesMatrixT[n, k] = biasesMatrix[k, n];
 		}
 	}
-
-	public static double BasisFunction(double a, double u, double v, double x, double y, int height, int width)
+	
+	public double[,] DCT2D(double[,] input)
 	{
-		var b = Math.Cos(((2d * x + 1d) * u * Math.PI) / (2 * width));
-		var c = Math.Cos(((2d * y + 1d) * v * Math.PI) / (2 * height));
+		var width = input.GetLength(1);
+		var height = input.GetLength(0);
 
-		return a * b * c;
+		if (height != dctSize || width != dctSize)
+			throw new ArgumentException("Dimensions don't match");
+		
+		var semiResult = MatrixMultiply(biasesMatrix, input);
+		return MatrixMultiply(semiResult, biasesMatrixT);
+	}
+	
+	public void IDCT2D(double[,] input, double[,] channel)
+	{
+		var width = input.GetLength(1);
+		var height = input.GetLength(0);
+		
+		if (height != dctSize || width != dctSize)
+			throw new ArgumentException("Dimensions don't match");
+
+		var semiResult = MatrixMultiply(biasesMatrixT, input);
+		MatrixMultiply(semiResult, biasesMatrix, ref channel);
 	}
 
-	private static double Alpha(int u)
+	private static void MatrixMultiply(double[,] m1, double[,] m2, ref double[,] result)
 	{
-		if (u == 0)
-			return 1 / Math.Sqrt(2);
-		return 1;
+		for (var i = 0; i < m1.GetLength(0); i++)
+		for (var j = 0; j < m2.GetLength(1); j++) 
+		for (var k = 0; k < m1.GetLength(0); k++)
+			result[i, j] += m1[i, k] * m2[k, j];
 	}
 
-	private static double Beta(int height, int width)
+	private static double[,] MatrixMultiply(double[,] m1, double[,] m2)
 	{
-		return 1d / width + 1d / height;
+		var result = new double[m1.GetLength(0), m2.GetLength(1)];
+		MatrixMultiply(m1, m2, ref result);
+		return result;
 	}
 }
