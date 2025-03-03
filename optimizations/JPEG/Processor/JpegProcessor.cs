@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using JPEG.Images;
-using PixelFormat = JPEG.Images.PixelFormat;
 
 namespace JPEG.Processor;
 
@@ -16,19 +14,11 @@ public class JpegProcessor : IJpegProcessor
 	private const int DCTSize = 8;
 	private readonly DCT Dct = new(DCTSize);
 
-	private static void PrintSpan<T>(Span<T> span)
-	{
-		foreach (var item in span)
-			Console.WriteLine(item);
-	}
-
 	public void Compress(string imagePath, string compressedImagePath)
 	{
 		using var fileStream = File.OpenRead(imagePath);
 		using var bmp = (Bitmap)Image.FromStream(fileStream, false, false);
-		var imageMatrix = (Matrix)bmp;
-		//Console.WriteLine($"{bmp.Width}x{bmp.Height} - {fileStream.Length / (1024.0 * 1024):F2} MB");
-		var compressionResult = Compress(imageMatrix, CompressionQuality);
+		var compressionResult = Compress((Matrix)bmp, CompressionQuality);
 		compressionResult.Save(compressedImagePath);
 	}
 
