@@ -17,6 +17,6 @@ public class BitsWithLength
         }
 
         public int GetHashCode(BitsWithLength obj) 
-            =>((397 * obj.Bits) << 5) ^ (17 * obj.BitsCount);
+            => ((397 * obj.Bits) << 5) ^ (17 * obj.BitsCount);
     }
 }
