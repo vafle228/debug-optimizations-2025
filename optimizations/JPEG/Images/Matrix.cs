@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Drawing.Imaging;
 
 namespace JPEG.Images;
@@ -8,7 +9,7 @@ internal class Matrix(int height, int width)
 {
 	public readonly int Width = width;
 	public readonly int Height = height;
-	public readonly Pixel[,] Pixels = new Pixel[height, width];
+	public readonly Pixel[] Pixels = new Pixel[height * width];
 
 	public static unsafe explicit operator Matrix(Bitmap bmp)
 	{
@@ -19,18 +20,22 @@ internal class Matrix(int height, int width)
 
 		try
 		{
-			for (var h = 0; h < height; h++)
+			fixed (Pixel* pPixels = &matrix.Pixels[0])
 			{
-				var pPixel = (byte*)bd.Scan0 + h * bd.Stride;
-				for (var w = 0; w < width; w++)
+				for (var h = 0; h < height; h++)
 				{
-					var blue = *pPixel++;
-					var green = *pPixel++;
-					var red = *pPixel++;
-					matrix.Pixels[h, w] = new Pixel(red, green, blue, PixelFormat.RGB);
+					var pBmpPixel = (byte*)bd.Scan0 + h * bd.Stride;
+					for (var w = 0; w < width; w++)
+					{
+						var blue = *pBmpPixel++;
+						var green = *pBmpPixel++;
+						var red = *pBmpPixel++;
+						
+						*(pPixels + h * width + w) = new Pixel(red, green, blue);
+					}
 				}
+				return matrix;
 			}
-			return matrix;
 		}
 		finally { bmp.UnlockBits(bd); }
 	}
@@ -45,20 +50,30 @@ internal class Matrix(int height, int width)
 
 		try
 		{
-			for (var h = 0; h < height; h++)
+			fixed (Pixel* pPixels = &matrix.Pixels[0])
 			{
-				var pPixel = (byte*)bd.Scan0 + h * bd.Stride;
-				for (var w = 0; w < width; w++)
+				for (var h = 0; h < height; h++)
 				{
-					var pixel = matrix.Pixels[h, w];
-					*pPixel = ToByte(pixel.B); pPixel++;
-					*pPixel = ToByte(pixel.G); pPixel++;
-					*pPixel = ToByte(pixel.R); pPixel++;
+					var pBmpPixel = (byte*)bd.Scan0 + h * bd.Stride;
+					for (var w = 0; w < width; w++)
+					{
+						var pixel = *(pPixels + h * width + w);
+						*pBmpPixel = ToByte(pixel.B); pBmpPixel++;
+						*pBmpPixel = ToByte(pixel.G); pBmpPixel++;
+						*pBmpPixel = ToByte(pixel.R); pBmpPixel++;
+					}
 				}
+				return bmp;
 			}
-			return bmp;
 		}
 		finally { bmp.UnlockBits(bd); }
+	}
+
+	public void GetSubMatrix(int yOff, int xOff, int subWidth, int subHeight, Func<Pixel, double> f, Span<double> output)
+	{
+		for (var j = 0; j < subHeight; j++)
+		for (var i = 0; i < subWidth; i++)
+			output[j * subWidth + i] = f(Pixels[(yOff + j) * Width + xOff + i]);
 	}
 
 	private static byte ToByte(double d) => d switch

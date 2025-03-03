@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using JPEG.Utilities;
 
 namespace JPEG;
@@ -79,7 +78,7 @@ class BitsBuffer
 
 class HuffmanCodec
 {
-	public static byte[] Encode(IEnumerable<byte> data, out Dictionary<BitsWithLength, byte> decodeTable,
+	public static byte[] Encode(Span<byte> data, out Dictionary<BitsWithLength, byte> decodeTable,
 		out long bitsCount)
 	{
 		var frequences = CalcFrequences(data);
@@ -182,10 +181,11 @@ class HuffmanCodec
 			.ToArray();
 	}
 
-	private static int[] CalcFrequences(IEnumerable<byte> data)
+	private static int[] CalcFrequences(Span<byte> data)
 	{
 		var result = new int[byte.MaxValue + 1];
-		Parallel.ForEach(data, b => Interlocked.Increment(ref result[b]));
+		foreach (var dataByte in data)
+			result[dataByte]++;
 		return result;
 	}
 }
