@@ -4,8 +4,8 @@ namespace JPEG.Huffman;
 
 public class BitsBuffer
 {
-    private BitsWithLength unfinishedBits;
     private readonly List<byte> buffer = [];
+    private readonly BitsWithLength unfinishedBits = new();
 
     public void Add(BitsWithLength bitsWithLength)
     {

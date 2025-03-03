@@ -48,10 +48,11 @@ internal static class HuffmanCodec
 
 	private static Dictionary<BitsWithLength, byte> CreateDecodeTable(BitsWithLength[] encodeTable)
 	{
-		var result = new Dictionary<BitsWithLength, byte>();
+		var result = new Dictionary<BitsWithLength, byte>(new BitsWithLength.Comparer());
 		for (var b = 0; b < encodeTable.Length; b++)
 		{
 			var bitsWithLength = encodeTable[b];
+			if (bitsWithLength == null) continue;
 			result[bitsWithLength] = (byte)b;
 		}
 

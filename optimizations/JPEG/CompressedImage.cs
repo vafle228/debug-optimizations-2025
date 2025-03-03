@@ -33,11 +33,13 @@ public class CompressedImage
 		buffer = BitConverter.GetBytes(DecodeTable.Count);
 		sw.Write(buffer, 0, buffer.Length);
 
-		foreach(var ((bits, bitsCount), mappedByte) in DecodeTable)
+		foreach(var (key, mappedByte) in DecodeTable)
 		{
+			var bits = key.Bits;
 			buffer = BitConverter.GetBytes(bits);
 			sw.Write(buffer, 0, buffer.Length);
 
+			var bitsCount = key.BitsCount;
 			buffer = BitConverter.GetBytes(bitsCount);
 			sw.Write(buffer, 0, buffer.Length);
 
@@ -70,7 +72,7 @@ public class CompressedImage
 
 		sr.Read(buffer, 0, 4);
 		var decodeTableSize = BitConverter.ToInt32(buffer, 0);
-		result.DecodeTable = new Dictionary<BitsWithLength, byte>(decodeTableSize);
+		result.DecodeTable = new Dictionary<BitsWithLength, byte>(decodeTableSize, new BitsWithLength.Comparer());
 
 		for(var i = 0; i < decodeTableSize; i++)
 		{
